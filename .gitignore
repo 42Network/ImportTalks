@@ -1,0 +1,6 @@
+.venv
+.idea
+*.pickle
+*.csv
+*.xlsx
+*.log
