@@ -12,6 +12,7 @@ import pandas as pd
 import asyncio
 from playwright.async_api import async_playwright
 import pickle
+from urllib.parse import urlparse
 
 import logging
 import logging.handlers
@@ -65,7 +66,7 @@ def get_conference_toc(year: int, month: int):
     :param year:
     :param month:
     """
-    if year < 1977:
+    if year < 2025:
         using_gc_link = True
         conf_url = f"{base_content_url}/general-conference/{year}/{month:02d}"
     else:
@@ -78,12 +79,23 @@ def get_conference_toc(year: int, month: int):
     except (OSError, requests.exceptions.HTTPError) as err:
         # raise SystemExit(err)
         logger.warning(f"Error getting Conference TOC with {conf_url=}: {err}")
-        return False
+        logger.warning(f"Trying with ensign URL")
+        try:
+            magazine_month = month + 1  # Add one because Liahona comes out one month after conference
+            conf_url = f"{base_content_url}/ensign/{year}/{magazine_month:02d}"
+            r = requests.get(conf_url, timeout=5)
+            r.raise_for_status()
+        except (OSError, requests.exceptions.HTTPError) as err:
+            # raise SystemExit(err)
+            logger.warning(f"Second error getting Conference TOC with {conf_url=}: {err}")
+            return False
     j = r.json()
     if not 'toc' in j:
         logger.warning(f"No TOC found for {conf_url=}")
         return False
-    logger.info(f"TOC found TOC for {year=} {month=} {j['toc']}")
+    logger.info(f"TOC found TOC for {year=} {month=} ")
+    with open(f"{args.download_dir}/toc/{year}-{month:02d}.json", 'w', encoding='utf-8') as f:
+          json.dump(j['toc'], f, ensure_ascii=False, indent=4)
     return j
 
 
@@ -96,7 +108,7 @@ def toc_runner(year, month):
     return year, month, get_conference_toc(year, month)
 
 def get_toc_list(years, months):
-    with cf.ThreadPoolExecutor(max_workers=10) as executor:
+    with cf.ThreadPoolExecutor(max_workers=1) as executor:
         tocs = list(executor.map(toc_runner, years, months))
 
     print(f"Found {len(tocs)} TOCs from {len(months)} conferences")
@@ -252,7 +264,8 @@ def download_talk_pdf(url, path):
     if not url:
         return False
     #logger.debug(f'{path=} {url=}')
-    file_pathname = path + "/" + os.path.basename(url)
+    url_path = urlparse(url).path
+    file_pathname = path + url_path
     if os.path.isfile(file_pathname) and os.path.getsize(file_pathname) > 0:
         logger.debug(f"Already got {file_pathname}")
     else:
@@ -264,6 +277,7 @@ def download_talk_pdf(url, path):
             # raise SystemExit(err)
             logger.warning(f"Error downloading talk with {url=}: {err}")
             return False
+        os.makedirs(os.path.dirname(file_pathname), exist_ok=True)
         with open(file_pathname, 'wb') as f:
             f.write(response.content)
     return file_pathname
@@ -298,7 +312,7 @@ def download_talks_runner(talk):
 
     pdf_url = talk['talk_pdf_url']
     if pdf_url and args.download_talk_pdfs:
-        talk['talk_pdf_filename'] = download_talk_pdf(pdf_url, args.download_dir + '/talk_pdfs/')
+        talk['talk_pdf_filename'] = download_talk_pdf(pdf_url, args.download_dir + '/talk_pdfs')
     else:
         talk['talk_pdf_filename'] = False
     # Only try print to PDF if PDF download fails
@@ -343,7 +357,7 @@ if __name__ == "__main__":
     months = []
     #for year in (1971, 1973, 1977, 1987, 1991, 2007, 2008, 2010, 2023):
     #for year in (2008, 2018, 2020):
-    for year in range(1971, 2025):
+    for year in range(2022, 2025):
         for month in (4, 10):
             years.append(year)
             months.append(month)
