@@ -1,6 +1,5 @@
 import calendar
 import os
-import argparse
 import requests
 import jq
 from datetime import datetime, timedelta
@@ -8,13 +7,11 @@ import json
 import concurrent.futures as cf
 import itertools as it
 import pandas as pd
-#from weasyprint import HTML
 import asyncio
 from playwright.async_api import async_playwright
 import pickle
 from urllib.parse import urlparse
 
-import logging
 import logging.handlers
 
 LOG_FILENAME = 'ImportTalks.log'

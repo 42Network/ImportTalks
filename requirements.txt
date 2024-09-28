@@ -1,0 +1,5 @@
+jmespath==1.0.1
+jq==1.7.0
+pandas==2.2.3
+playwright==1.46.0
+Requests==2.32.3

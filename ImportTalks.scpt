@@ -1,5 +1,3 @@
-
-
 tell application id "DNtp"
 	set doc to (item 1 of (selection as list)) -- Handling a csv file selected in DEVONthink
 
